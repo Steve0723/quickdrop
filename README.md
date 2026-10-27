@@ -4,6 +4,13 @@
 
 后端 Go（标准库，零第三方依赖），前端原生 HTML/CSS/JS 并通过 `go:embed` 打进同一个二进制。
 
+```bash
+# 一条命令部署（Linux / macOS）
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | bash
+```
+
+Windows 用 PowerShell：`irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex`
+
 ## 功能
 
 | 能力 | 说明 |
@@ -18,9 +25,57 @@
 | 账号管理 | 管理员可建号、改密、禁用、删除；删除账号会连带删除其分享与文件 |
 | 分享面板 | 查看自己分享的状态、剩余时间、浏览/下载次数，可复制链接、查看详情、手动删除 |
 
-## 快速开始
+## 一键部署
+
+脚本会自动完成：检查 Docker 环境 → 下载代码 → 生成随机管理员密码写入 `.env` → 构建镜像 → 启动并等待健康检查通过 → 打印访问地址和账号。
+
+### Linux / macOS
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | bash
+```
+
+服务器上没有 Docker 时，加上 `QD_INSTALL_DOCKER=1` 让脚本调用官方脚本自动安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | QD_INSTALL_DOCKER=1 bash
+```
+
+### Windows（PowerShell，需先装好并启动 Docker Desktop）
+
+```powershell
+irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex
+```
+
+### 自定义参数
+
+两种方式等价，任选其一：
+
+```bash
+# 1. 通过环境变量传给脚本
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh \
+  | QD_DIR=/opt/quickdrop QD_PORT=8080 QD_ADMIN_PASSWORD=my-pass bash
+
+# 2. 先下载脚本，改完变量再执行
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh -o deploy.sh
+bash deploy.sh
+```
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `QD_DIR` | `~/quickdrop` | 安装目录 |
+| `QD_PORT` | `6026` | 对外端口 |
+| `QD_ADMIN_USER` | `admin` | 管理员用户名 |
+| `QD_ADMIN_PASSWORD` | 随机 16 位 | 管理员密码，会写入 `.env` |
+| `QD_INSTALL_DOCKER` | `0` | 设为 `1` 时缺 Docker 会自动安装 |
+
+脚本是幂等的：重复执行会拉取最新代码并重建容器，已有的 `.env` 和数据卷不会被覆盖。
+
+## 手动部署
+
+```bash
+git clone https://github.com/Steve0723/quickdrop.git
+cd quickdrop
 docker compose up -d --build
 ```
 
@@ -142,6 +197,8 @@ quickdrop/
 │   └── assets/      style.css  common.js
 ├── Dockerfile
 ├── docker-compose.yml
+├── deploy.sh        # 一键部署（Linux / macOS）
+├── deploy.ps1       # 一键部署（Windows）
 └── data/            # 运行时生成
 ```
 
