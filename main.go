@@ -78,6 +78,36 @@ func (a *App) handleFallback(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf)
 }
 
+// 服务端先校验会话再返回页面，避免「先闪一下后台页面再跳登录页」
+func (a *App) pageIndex(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.currentUser(r); !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	a.serveStatic("index.html", "no-store")(w, r)
+}
+
+func (a *App) pageLogin(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.currentUser(r); ok {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	a.serveStatic("login.html", "no-store")(w, r)
+}
+
+func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
+	user, ok := a.currentUser(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	if user.Role != "admin" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	a.serveStatic("admin.html", "no-store")(w, r)
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 
@@ -103,9 +133,9 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("PATCH /api/admin/users/{id}", a.handleAdminUpdateUser)
 	mux.HandleFunc("DELETE /api/admin/users/{id}", a.handleAdminDeleteUser)
 
-	mux.HandleFunc("GET /{$}", a.serveStatic("index.html", "no-store"))
-	mux.HandleFunc("GET /login", a.serveStatic("login.html", "no-store"))
-	mux.HandleFunc("GET /admin", a.serveStatic("admin.html", "no-store"))
+	mux.HandleFunc("GET /{$}", a.pageIndex)
+	mux.HandleFunc("GET /login", a.pageLogin)
+	mux.HandleFunc("GET /admin", a.pageAdmin)
 	mux.HandleFunc("GET /s/{id}", a.serveStatic("share.html", "no-store"))
 	mux.HandleFunc("GET /assets/{file...}", a.handleAsset)
 	mux.HandleFunc("/", a.handleFallback)
