@@ -8,7 +8,8 @@
 $ErrorActionPreference = 'Stop'
 
 $RepoZip    = 'https://github.com/Steve0723/quickdrop/archive/refs/heads/main.zip'
-$InstallDir = if ($env:QD_DIR) { $env:QD_DIR } else { Join-Path $env:USERPROFILE 'quickdrop' }
+# 默认安装到执行命令时所在的目录
+$InstallDir = if ($env:QD_DIR) { $env:QD_DIR } else { (Get-Location).Path }
 $Port       = if ($env:QD_PORT) { $env:QD_PORT } else { '6026' }
 $AdminUser  = if ($env:QD_ADMIN_USER) { $env:QD_ADMIN_USER } else { 'admin' }
 $AdminPass  = $env:QD_ADMIN_PASSWORD
@@ -35,10 +36,30 @@ Ok 'Docker 环境就绪'
 # ---------- 2. 获取代码 ----------
 
 $ComposeFile = Join-Path $InstallDir 'docker-compose.yml'
+$MainFile    = Join-Path $InstallDir 'main.go'
 
-if (Test-Path $ComposeFile) {
-    Info "复用已有目录 $InstallDir"
+$needDownload = $false
+
+if (Test-Path (Join-Path $InstallDir '.git')) {
+    Info '检测到 Git 仓库，拉取最新代码…'
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Push-Location $InstallDir
+        try { git pull --ff-only } catch { Warn '拉取失败，沿用当前代码继续' }
+        finally { Pop-Location }
+    }
+} elseif ((Test-Path $ComposeFile) -and (Test-Path $MainFile)) {
+    Info '检测到已有代码，更新到最新版本…'
+    $needDownload = $true
 } else {
+    # 避免把项目文件铺到用户已有内容的目录里
+    $existing = @(Get-ChildItem -Force -LiteralPath $InstallDir -ErrorAction SilentlyContinue)
+    if ($existing.Count -gt 0 -and $env:QD_FORCE -ne '1') {
+        Die "目录 $InstallDir 不为空，且不是本项目的目录。`n   请换一个空目录执行，或设置 QD_DIR 指定安装位置。`n   确认要覆盖现有文件时，先设置 `$env:QD_FORCE = '1'"
+    }
+    $needDownload = $true
+}
+
+if ($needDownload) {
     Info "下载代码到 $InstallDir …"
     $tmp = Join-Path $env:TEMP ("qd-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null

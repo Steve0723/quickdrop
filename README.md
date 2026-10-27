@@ -5,11 +5,12 @@
 后端 Go（标准库，零第三方依赖），前端原生 HTML/CSS/JS 并通过 `go:embed` 打进同一个二进制。
 
 ```bash
-# 一条命令部署（Linux / macOS）
+# 一条命令部署（Linux / macOS，装到当前目录）
+mkdir -p ~/quickdrop && cd ~/quickdrop
 curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | bash
 ```
 
-Windows 用 PowerShell：`irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex`
+Windows 用 PowerShell：先 `cd` 到目标目录，再执行 `irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex`
 
 ## 功能
 
@@ -29,9 +30,12 @@ Windows 用 PowerShell：`irm https://raw.githubusercontent.com/Steve0723/quickd
 
 脚本会自动完成：检查 Docker 环境 → 下载代码 → 生成随机管理员密码写入 `.env` → 构建镜像 → 启动并等待健康检查通过 → 打印访问地址和账号。
 
+**代码默认装到你执行命令时所在的目录**，所以先 `cd` 到目标位置再执行；当前目录非空且不是本项目时会直接报错，不会覆盖你的文件。
+
 ### Linux / macOS
 
 ```bash
+mkdir -p ~/quickdrop && cd ~/quickdrop
 curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | bash
 ```
 
@@ -44,6 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh 
 ### Windows（PowerShell，需先装好并启动 Docker Desktop）
 
 ```powershell
+cd C:\quickdrop
 irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex
 ```
 
@@ -52,22 +57,25 @@ irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex
 两种方式等价，任选其一：
 
 ```bash
-# 1. 通过环境变量传给脚本（变量以「名=值」形式前置）
-curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh \
-  | QD_DIR=/opt/quickdrop QD_PORT=8080 bash
+# 1. 只改端口（变量以「名=值」形式前置）
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | QD_PORT=8080 bash
 
-# 2. 先下载脚本，改完变量再执行
+# 2. 指定安装目录（不指定就用当前目录）
+curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh | QD_DIR=/opt/quickdrop bash
+
+# 3. 先下载脚本，改完变量再执行
 curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh -o deploy.sh
 bash deploy.sh
 ```
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `QD_DIR` | `~/quickdrop` | 安装目录 |
+| `QD_DIR` | 当前目录 | 安装目录 |
 | `QD_PORT` | `6026` | 对外端口 |
 | `QD_ADMIN_USER` | `admin` | 管理员用户名 |
 | `QD_ADMIN_PASSWORD` | 随机 16 位 | 管理员密码，会写入 `.env` |
 | `QD_INSTALL_DOCKER` | `0` | 设为 `1` 时缺 Docker 会自动安装 |
+| `QD_FORCE` | `0` | 设为 `1` 时允许把代码铺进非空目录 |
 
 脚本是幂等的：重复执行会拉取最新代码并重建容器，已有的 `.env` 和数据卷不会被覆盖。
 

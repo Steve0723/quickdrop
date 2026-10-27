@@ -13,10 +13,11 @@
 #
 set -euo pipefail
 
-GIT_URL="https://github.com/Steve0723/quickdrop.git"
 RAW_URL="https://raw.githubusercontent.com/Steve0723/quickdrop/main"
+ARCHIVE_URL="https://github.com/Steve0723/quickdrop/archive/refs/heads/main.tar.gz"
 
-INSTALL_DIR="${QD_DIR:-$HOME/quickdrop}"
+# 默认安装到执行命令时所在的目录
+INSTALL_DIR="${QD_DIR:-$PWD}"
 PORT="${QD_PORT:-6026}"
 ADMIN_USER="${QD_ADMIN_USER:-admin}"
 ADMIN_PASS="${QD_ADMIN_PASSWORD:-}"
@@ -27,11 +28,17 @@ warn() { printf '\033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 gen_pass() {
+  local p=""
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -hex 8
-  else
-    dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n' | cut -c1-16
+    p="$(openssl rand -hex 8 2>/dev/null || true)"
   fi
+  if [ -z "$p" ]; then
+    p="$(od -An -tx1 -N8 /dev/urandom 2>/dev/null | tr -d ' \n' || true)"
+  fi
+  if [ -z "$p" ]; then
+    p="qd$(date +%s)$$"
+  fi
+  printf '%s' "$p"
 }
 
 # ---------- 1. 检查 Docker ----------
@@ -83,24 +90,36 @@ ok "Docker 环境就绪"
 
 # ---------- 2. 获取代码 ----------
 
+NEED_DOWNLOAD=0
+
 if [ -d "$INSTALL_DIR/.git" ]; then
-  info "检测到已有安装，拉取最新代码…"
+  info "检测到 Git 仓库，拉取最新代码…"
   git -C "$INSTALL_DIR" pull --ff-only >/dev/null 2>&1 || warn "拉取失败，沿用当前代码继续"
-elif [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
-  info "复用已有目录 $INSTALL_DIR"
+elif [ -f "$INSTALL_DIR/docker-compose.yml" ] && [ -f "$INSTALL_DIR/main.go" ]; then
+  info "检测到已有代码，更新到最新版本…"
+  NEED_DOWNLOAD=1
 else
-  info "下载代码到 $INSTALL_DIR …"
-  mkdir -p "$(dirname "$INSTALL_DIR")"
-  if command -v git >/dev/null 2>&1; then
-    git clone --depth 1 "$GIT_URL" "$INSTALL_DIR" >/dev/null 2>&1 || die "克隆仓库失败"
-  else
-    TMP_DIR="$(mktemp -d)"
-    curl -fsSL "$RAW_URL/archive/refs/heads/main.tar.gz" -o "$TMP_DIR/src.tar.gz" || die "下载代码失败"
-    tar -xzf "$TMP_DIR/src.tar.gz" -C "$TMP_DIR"
-    mkdir -p "$INSTALL_DIR"
-    cp -a "$TMP_DIR/quickdrop-main/." "$INSTALL_DIR/"
-    rm -rf "$TMP_DIR"
+  # 避免把项目文件铺到用户已有内容的目录里
+  if [ -n "$(ls -A "$INSTALL_DIR" 2>/dev/null || true)" ] && [ "${QD_FORCE:-0}" != "1" ]; then
+    die "目录 $INSTALL_DIR 不为空，且不是本项目的目录。
+   请换一个空目录执行，或指定安装位置：
+     curl -fsSL $RAW_URL/deploy.sh | QD_DIR=./quickdrop bash
+   确认要覆盖现有文件时，加 QD_FORCE=1"
   fi
+  NEED_DOWNLOAD=1
+fi
+
+if [ "$NEED_DOWNLOAD" = "1" ]; then
+  info "下载代码到 $INSTALL_DIR …"
+  mkdir -p "$INSTALL_DIR"
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+  curl -fsSL "$ARCHIVE_URL" -o "$TMP_DIR/src.tar.gz" || die "下载代码失败"
+  # 先进入临时目录再解压，避免 Windows 盘符被 tar 当成远端主机名
+  ( cd "$TMP_DIR" && tar -xzf src.tar.gz ) || die "解压失败"
+  cp -a "$TMP_DIR/quickdrop-main/." "$INSTALL_DIR/" || die "写入文件失败"
+  rm -rf "$TMP_DIR"
+  trap - EXIT
 fi
 
 cd "$INSTALL_DIR"
@@ -147,7 +166,7 @@ done
 
 # ---------- 5. 输出结果 ----------
 
-IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
 [ -n "${IP:-}" ] || IP="<服务器IP>"
 
 echo
