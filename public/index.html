@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>我的分享 · 瞬传</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M11 21 21 11M21 11h-6.5M21 11v6.5' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="9.5" fill="url(#qdgrad)"/>
+        <path d="M11 21 21 11M21 11h-6.5M21 11v6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="qdgrad" x1="0" y1="0" x2="32" y2="32">
+            <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="brand-text">瞬传<em>QuickDrop</em></span>
+    </a>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost btn-sm" id="adminLink" href="/admin" hidden>账号管理</a>
+      <span class="user-chip"><span class="dot"></span><span id="userName">…</span></span>
+      <button class="btn btn-quiet btn-sm" id="logoutBtn" type="button">退出</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <h1>创建一条临时分享</h1>
+    <p>文本与文件都能发。到期自动删除，链接只在设定时间内有效。</p>
+  </section>
+
+  <div class="layout">
+    <!-- 创建表单 -->
+    <form class="card" id="createForm" novalidate>
+      <div class="card-head">
+        <div>
+          <div class="card-title">新建分享</div>
+          <div class="card-sub">至少填写文本或选择一个文件</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="title">标题 <span class="opt">可选</span></label>
+        <input class="input" id="title" maxlength="120" placeholder="给这条分享起个名字">
+      </div>
+
+      <div class="field">
+        <label class="label" for="content">文本内容 <span class="opt">所有人可见</span></label>
+        <textarea class="textarea" id="content" placeholder="要分享的文本内容…"></textarea>
+      </div>
+
+      <div class="field">
+        <input type="checkbox" class="toggle" id="hiddenToggle">
+        <label class="switch-row" for="hiddenToggle">
+          <span class="switch-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span>隐藏文本<span class="switch-desc">　需要 4 位数字密码才能查看</span></span>
+          </span>
+          <span class="switch"></span>
+        </label>
+        <div class="panel-inset" id="hiddenPanel" hidden>
+          <textarea class="textarea" id="hiddenContent" placeholder="只有输入正确密码的人才能看到这段内容"></textarea>
+          <div class="hint">创建后系统会随机生成 4 位数字密码，请自行转告接收方。</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">文件 <span class="opt">最多 10 个 · 单个 200MB</span></label>
+        <div class="dropzone" id="dropzone">
+          <div class="dz-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          </div>
+          <div class="dz-title">点击选择文件，或拖拽到这里</div>
+          <div class="dz-sub">支持任意格式</div>
+        </div>
+        <input type="file" id="fileInput" multiple hidden>
+        <ul class="file-list" id="fileList"></ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <input type="checkbox" class="toggle" id="codeToggle">
+        <label class="switch-row" for="codeToggle">
+          <span class="switch-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>
+            <span>链接提取码<span class="switch-desc">　可选</span></span>
+          </span>
+          <span class="switch"></span>
+        </label>
+        <div class="panel-inset" id="codePanel" hidden>
+          <div class="row">
+            <input class="input grow" id="extractionCode" maxlength="16" placeholder="4-6 位字母或数字" autocomplete="off">
+            <button type="button" class="btn btn-ghost btn-sm" id="randomCodeBtn">随机</button>
+          </div>
+          <div class="hint">开启后，访客需要输入提取码才能打开链接和下载文件。</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="ttl">有效期</label>
+        <select class="select" id="ttl">
+          <option value="0.5">30 分钟</option>
+          <option value="1">1 小时</option>
+          <option value="6">6 小时</option>
+          <option value="12">12 小时</option>
+          <option value="24" selected>24 小时（默认）</option>
+          <option value="72">3 天</option>
+          <option value="168">7 天</option>
+          <option value="custom">自定义…</option>
+        </select>
+        <div class="row" id="customTtlWrap" style="margin-top:8px" hidden>
+          <input class="input" type="number" id="customTtl" min="1" max="720" value="48">
+          <span class="muted small">小时（最长 720）</span>
+        </div>
+      </div>
+
+      <div class="progress" id="progress" hidden><span></span></div>
+
+      <button class="btn btn-primary btn-block" id="submitBtn" type="submit">创建分享链接</button>
+    </form>
+
+    <!-- 分享列表 -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">我的分享</div>
+          <div class="card-sub" id="listSummary">加载中…</div>
+        </div>
+        <button class="btn btn-quiet btn-sm" id="refreshBtn" type="button">刷新</button>
+      </div>
+      <ul class="share-list" id="shareList"></ul>
+      <div class="empty" id="emptyState" hidden>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l2-3h14l2 3"/><path d="M9 12h6"/></svg>
+        <div>还没有创建过分享</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="/assets/common.js"></script>
+<script>
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 200 * 1024 * 1024;
+
+let currentUser = null;
+let shares = [];
+let selectedFiles = [];
+
+/* ---------------- 初始化 ---------------- */
+
+(async function boot() {
+  const res = await api('/api/me');
+  if (!res.ok || !res.data.user) {
+    location.replace('/login');
+    return;
+  }
+  currentUser = res.data.user;
+  $('#userName').textContent = currentUser.username;
+  if (currentUser.role === 'admin') $('#adminLink').hidden = false;
+  loadShares();
+})();
+
+$('#logoutBtn').addEventListener('click', async () => {
+  await api('/api/logout', { method: 'POST' });
+  location.replace('/login');
+});
+
+/* ---------------- 表单交互 ---------------- */
+
+$('#hiddenToggle').addEventListener('change', (e) => {
+  const panel = $('#hiddenPanel');
+  panel.hidden = !e.target.checked;
+  if (e.target.checked) setTimeout(() => $('#hiddenContent').focus(), 60);
+});
+
+$('#codeToggle').addEventListener('change', (e) => {
+  const panel = $('#codePanel');
+  panel.hidden = !e.target.checked;
+  if (e.target.checked) {
+    if (!$('#extractionCode').value) $('#extractionCode').value = randomCode();
+    setTimeout(() => $('#extractionCode').focus(), 60);
+  }
+});
+
+function randomCode() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let out = '';
+  const buf = new Uint8Array(4);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < 4; i += 1) out += chars[buf[i] % chars.length];
+  return out;
+}
+
+$('#randomCodeBtn').addEventListener('click', () => {
+  $('#extractionCode').value = randomCode();
+});
+
+$('#ttl').addEventListener('change', (e) => {
+  $('#customTtlWrap').hidden = e.target.value !== 'custom';
+});
+
+/* ---------------- 文件选择 ---------------- */
+
+const dropzone = $('#dropzone');
+const fileInput = $('#fileInput');
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  addFiles(fileInput.files);
+  fileInput.value = '';
+});
+
+['dragenter', 'dragover'].forEach((evt) => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach((evt) => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  });
+});
+dropzone.addEventListener('drop', (e) => {
+  if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+});
+
+function addFiles(fileList) {
+  for (const file of Array.from(fileList)) {
+    if (selectedFiles.length >= MAX_FILES) {
+      toast(`最多 ${MAX_FILES} 个文件`, 'err');
+      break;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      toast(`${file.name} 超过 200MB`, 'err');
+      continue;
+    }
+    if (selectedFiles.some((f) => f.name === file.name && f.size === file.size)) continue;
+    selectedFiles.push(file);
+  }
+  renderFiles();
+}
+
+function renderFiles() {
+  const list = $('#fileList');
+  list.innerHTML = selectedFiles
+    .map(
+      (file, index) => `
+      <li class="file-item">
+        <span class="fi-icon">${fileIconSvg()}</span>
+        <div class="fi-body">
+          <div class="fi-name">${escapeHtml(file.name)}</div>
+          <div class="fi-meta">${formatBytes(file.size)}</div>
+        </div>
+        <button type="button" class="btn btn-quiet btn-sm" data-remove="${index}">移除</button>
+      </li>`
+    )
+    .join('');
+}
+
+$('#fileList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-remove]');
+  if (!btn) return;
+  selectedFiles.splice(Number(btn.dataset.remove), 1);
+  renderFiles();
+});
+
+/* ---------------- 上传与创建 ---------------- */
+
+function uploadFile(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/uploads');
+    xhr.setRequestHeader('content-type', 'application/octet-stream');
+    xhr.setRequestHeader('x-file-name', encodeURIComponent(file.name));
+    xhr.setRequestHeader('x-file-type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300 && data.id) resolve(data);
+      else reject(new Error(data.message || '上传失败'));
+    };
+    xhr.onerror = () => reject(new Error('网络异常，上传失败'));
+    xhr.send(file);
+  });
+}
+
+function setProgress(ratio) {
+  const bar = $('#progress');
+  if (ratio == null) {
+    bar.hidden = true;
+    bar.firstElementChild.style.width = '0%';
+    return;
+  }
+  bar.hidden = false;
+  bar.firstElementChild.style.width = `${Math.min(100, Math.round(ratio * 100))}%`;
+}
+
+function setBusy(busy) {
+  $('#submitBtn').disabled = busy;
+  $('#submitBtn').textContent = busy ? '正在创建…' : '创建分享链接';
+}
+
+function resolveTtl() {
+  const value = $('#ttl').value;
+  if (value === 'custom') {
+    const custom = Number($('#customTtl').value);
+    return Number.isFinite(custom) && custom > 0 ? Math.min(custom, 720) : 24;
+  }
+  return Number(value);
+}
+
+$('#createForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const title = $('#title').value.trim();
+  const content = $('#content').value;
+  const hiddenOn = $('#hiddenToggle').checked;
+  const hiddenContent = hiddenOn ? $('#hiddenContent').value : '';
+  const codeOn = $('#codeToggle').checked;
+  const extractionCode = codeOn ? $('#extractionCode').value.trim() : '';
+
+  if (!content.trim() && !hiddenContent.trim() && selectedFiles.length === 0) {
+    toast('请填写文本或选择文件', 'err');
+    return;
+  }
+  if (hiddenOn && !hiddenContent.trim()) {
+    toast('隐藏文本内容不能为空', 'err');
+    return;
+  }
+  if (codeOn && !/^[A-Za-z0-9]{1,16}$/.test(extractionCode)) {
+    toast('提取码只能包含字母和数字', 'err');
+    return;
+  }
+
+  setBusy(true);
+  setProgress(selectedFiles.length ? 0 : null);
+
+  try {
+    const uploadIds = [];
+    if (selectedFiles.length) {
+      const totalBytes = selectedFiles.reduce((sum, f) => sum + f.size, 0) || 1;
+      let doneBytes = 0;
+      for (const file of selectedFiles) {
+        const result = await uploadFile(file, (ratio) => {
+          setProgress((doneBytes + file.size * ratio) / totalBytes);
+        });
+        uploadIds.push(result.id);
+        doneBytes += file.size;
+      }
+      setProgress(1);
+    }
+
+    const res = await api('/api/shares', {
+      method: 'POST',
+      body: {
+        title,
+        content,
+        hiddenContent,
+        extractionCode,
+        ttlHours: resolveTtl(),
+        uploadIds
+      }
+    });
+
+    if (!res.ok) {
+      toast(res.data.message || '创建失败', 'err');
+      return;
+    }
+
+    resetForm();
+    loadShares();
+    showResult(res.data);
+  } catch (err) {
+    toast(err.message || '创建失败', 'err');
+  } finally {
+    setBusy(false);
+    setProgress(null);
+  }
+});
+
+function resetForm() {
+  $('#title').value = '';
+  $('#content').value = '';
+  $('#hiddenToggle').checked = false;
+  $('#hiddenPanel').hidden = true;
+  $('#hiddenContent').value = '';
+  $('#codeToggle').checked = false;
+  $('#codePanel').hidden = true;
+  $('#extractionCode').value = '';
+  $('#ttl').value = '24';
+  $('#customTtlWrap').hidden = true;
+  selectedFiles = [];
+  renderFiles();
+}
+
+/* ---------------- 弹窗 ---------------- */
+
+function openModal(html) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `<div class="modal">${html}</div>`;
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
+  document.body.appendChild(backdrop);
+  return backdrop;
+}
+
+function bindCopy(root) {
+  root.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (btn) {
+      const ok = await copyText(btn.dataset.copy);
+      toast(ok ? '已复制' : '复制失败，请手动选择', ok ? 'ok' : 'err');
+      return;
+    }
+    if (e.target.closest('[data-close]')) {
+      const backdrop = root.closest('.modal-backdrop') || root;
+      backdrop.remove();
+    }
+  });
+}
+
+function showResult(data) {
+  const link = `${location.origin}${data.path}`;
+  const rows = [];
+
+  rows.push(`
+    <div class="field">
+      <div class="label">分享链接</div>
+      <div class="copy-box">
+        <span class="copy-text">${escapeHtml(link)}</span>
+        <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(link)}">复制</button>
+      </div>
+    </div>`);
+
+  if (data.extractionCode) {
+    rows.push(`
+      <div class="field">
+        <div class="label">提取码</div>
+        <div class="copy-box">
+          <span class="copy-text" style="font-size:15px;letter-spacing:.2em">${escapeHtml(data.extractionCode)}</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(data.extractionCode)}">复制</button>
+        </div>
+      </div>`);
+  }
+
+  if (data.hiddenCode) {
+    rows.push(`
+      <div class="field">
+        <div class="label">隐藏文本 · 查看密码</div>
+        <div class="copy-box">
+          <span class="copy-text" style="font-size:17px;letter-spacing:.34em;font-weight:700">${escapeHtml(data.hiddenCode)}</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(data.hiddenCode)}">复制</button>
+        </div>
+        <div class="hint">4 位数字密码，请自行转告接收方；在「我的分享 → 详情」中可再次查看。</div>
+      </div>`);
+  }
+
+  const modal = openModal(`
+    <h2>分享已创建</h2>
+    <p class="modal-sub">${formatDateTime(data.expiresAt)} 到期后自动删除</p>
+    ${rows.join('')}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" type="button" data-close>关闭</button>
+      <a class="btn btn-primary" href="${escapeHtml(data.path)}" target="_blank" rel="noopener">打开链接</a>
+    </div>
+  `);
+
+  bindCopy(modal);
+}
+
+/* ---------------- 列表 ---------------- */
+
+async function loadShares() {
+  const res = await api('/api/shares');
+  if (res.status === 401) {
+    location.replace('/login');
+    return;
+  }
+  shares = (res.data && res.data.shares) || [];
+  renderShares();
+}
+
+function renderShares() {
+  const list = $('#shareList');
+  const empty = $('#emptyState');
+  const summary = $('#listSummary');
+
+  const active = shares.filter((s) => !s.expired).length;
+  summary.textContent = shares.length ? `${shares.length} 条记录 · ${active} 条有效` : '暂无记录';
+
+  if (!shares.length) {
+    list.innerHTML = '';
+    empty.hidden = false;
+    return;
+  }
+
+  empty.hidden = true;
+  list.innerHTML = shares
+    .map(
+      (s) => `
+    <li class="share-item ${s.expired ? 'expired' : ''}" data-id="${s.id}">
+      <div class="si-top">
+        <div class="si-title">${escapeHtml(s.title || '未命名分享')}</div>
+        <span class="badge ${s.expired ? 'danger' : 'ok'}">${s.expired ? '已过期' : '有效'}</span>
+      </div>
+      <div class="si-meta">
+        <span>${s.fileCount ? `${s.fileCount} 个文件 · ${formatBytes(s.totalSize)}` : '纯文本'}</span>
+        ${s.hasHidden ? '<span class="badge brand">隐藏文本</span>' : ''}
+        ${s.hasCode ? '<span class="badge">提取码</span>' : ''}
+        <span>${s.expired ? '已结束' : remainingText(s.expiresAt)}</span>
+        <span>浏览 ${s.views}</span>
+      </div>
+      <div class="si-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-act="copy">复制链接</button>
+        <button class="btn btn-quiet btn-sm" type="button" data-act="detail">详情</button>
+        <button class="btn btn-quiet btn-sm" type="button" data-act="delete">删除</button>
+      </div>
+    </li>`
+    )
+    .join('');
+}
+
+$('#shareList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const item = btn.closest('.share-item');
+  const id = item.dataset.id;
+  const share = shares.find((s) => s.id === id);
+  if (!share) return;
+
+  if (btn.dataset.act === 'copy') {
+    const ok = await copyText(`${location.origin}${share.path}`);
+    toast(ok ? '链接已复制' : '复制失败', ok ? 'ok' : 'err');
+    return;
+  }
+
+  if (btn.dataset.act === 'detail') {
+    const res = await api(`/api/shares/${id}`);
+    if (!res.ok) {
+      toast('获取详情失败', 'err');
+      return;
+    }
+    showDetail(res.data);
+    return;
+  }
+
+  if (btn.dataset.act === 'delete') {
+    if (!confirm('删除后链接立即失效、文件会被永久删除，确定继续？')) return;
+    const res = await api(`/api/shares/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('已删除', 'ok');
+      loadShares();
+    } else {
+      toast(res.data.message || '删除失败', 'err');
+    }
+  }
+});
+
+function showDetail(data) {
+  const link = `${location.origin}${data.path}`;
+  const parts = [];
+
+  parts.push(`
+    <div class="kv" style="margin-bottom:18px">
+      <div class="kv-row"><span class="k">状态</span><span class="v">${data.expired ? '已过期' : '有效 · ' + remainingText(data.expiresAt)}</span></div>
+      <div class="kv-row"><span class="k">创建时间</span><span class="v">${formatDateTime(data.createdAt)}</span></div>
+      <div class="kv-row"><span class="k">到期时间</span><span class="v">${formatDateTime(data.expiresAt)}</span></div>
+      <div class="kv-row"><span class="k">访问 / 下载</span><span class="v">${data.views} / ${data.downloads}</span></div>
+    </div>`);
+
+  parts.push(`
+    <div class="field">
+      <div class="label">链接</div>
+      <div class="copy-box">
+        <span class="copy-text">${escapeHtml(link)}</span>
+        <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(link)}">复制</button>
+      </div>
+    </div>`);
+
+  if (data.extractionCode) {
+    parts.push(`
+      <div class="field">
+        <div class="label">提取码</div>
+        <div class="copy-box">
+          <span class="copy-text" style="font-size:15px;letter-spacing:.2em">${escapeHtml(data.extractionCode)}</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(data.extractionCode)}">复制</button>
+        </div>
+      </div>`);
+  }
+
+  if (data.hidden) {
+    parts.push(`
+      <div class="field">
+        <div class="label">隐藏文本 · 查看密码</div>
+        <div class="copy-box">
+          <span class="copy-text" style="font-size:17px;letter-spacing:.34em;font-weight:700">${escapeHtml(data.hidden.code || '—')}</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-copy="${escapeHtml(data.hidden.code || '')}">复制</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="label">隐藏文本内容</div>
+        <div class="text-block" style="max-height:180px;overflow:auto;font-size:13.5px">${escapeHtml(data.hidden.content)}</div>
+      </div>`);
+  }
+
+  if (data.content) {
+    parts.push(`
+      <div class="field">
+        <div class="label">公开文本</div>
+        <div class="text-block" style="max-height:150px;overflow:auto;font-size:13.5px">${escapeHtml(data.content)}</div>
+      </div>`);
+  }
+
+  if (data.files && data.files.length) {
+    parts.push(`
+      <div class="field">
+        <div class="label">文件</div>
+        ${data.files
+          .map(
+            (f) => `<div class="download-row">
+              <span class="fi-icon">${fileIconSvg()}</span>
+              <div class="fi-body">
+                <div class="fi-name">${escapeHtml(f.name)}</div>
+                <div class="fi-meta">${formatBytes(f.size)} · 下载 ${f.downloads} 次</div>
+              </div>
+            </div>`
+          )
+          .join('')}
+      </div>`);
+  }
+
+  const modal = openModal(`
+    <h2>${escapeHtml(data.title || '未命名分享')}</h2>
+    <p class="modal-sub">分享详情</p>
+    ${parts.join('')}
+    <div class="modal-actions">
+      <button class="btn btn-primary" type="button" data-close>关闭</button>
+    </div>
+  `);
+
+  bindCopy(modal);
+}
+
+$('#refreshBtn').addEventListener('click', () => {
+  loadShares();
+  toast('已刷新');
+});
+
+setInterval(() => {
+  if (!document.hidden) loadShares();
+}, 60000);
+</script>
+</body>
+</html>

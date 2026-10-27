@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>分享内容 · 瞬传</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M11 21 21 11M21 11h-6.5M21 11v6.5' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<main class="page page-narrow">
+
+  <div class="share-head">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="9.5" fill="url(#qdgrad)"/>
+        <path d="M11 21 21 11M21 11h-6.5M21 11v6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="qdgrad" x1="0" y1="0" x2="32" y2="32">
+            <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="brand-text">瞬传<em>QuickDrop</em></span>
+    </div>
+  </div>
+
+  <!-- 加载中 -->
+  <div class="card center-card" id="viewLoading">
+    <div class="spinner"></div>
+    <p>正在加载分享内容…</p>
+  </div>
+
+  <!-- 出错 / 已失效 -->
+  <div class="card center-card" id="viewError" hidden>
+    <div class="state-icon danger">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/></svg>
+    </div>
+    <h2 id="errorTitle">链接已失效</h2>
+    <p id="errorText">该分享可能已过期或已被删除。</p>
+  </div>
+
+  <!-- 提取码 -->
+  <div class="card center-card" id="viewLock" hidden>
+    <div class="state-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h2 id="lockTitle">此分享需要提取码</h2>
+    <p>请输入分享者提供的提取码</p>
+    <form class="code-form" id="codeForm">
+      <input class="input code-input" id="codeInput" maxlength="16" autocomplete="off" placeholder="提取码" autofocus>
+      <button class="btn btn-primary" type="submit" id="codeBtn">打开</button>
+    </form>
+    <p class="form-error" id="codeError" hidden></p>
+  </div>
+
+  <!-- 分享内容 -->
+  <article class="card share-card" id="viewShare" hidden>
+    <h1 class="share-title" id="shareTitle"></h1>
+    <div class="share-meta">
+      <span id="shareOwner"></span>
+      <span class="sep"></span>
+      <span id="shareCreated"></span>
+      <span class="sep"></span>
+      <span id="shareExpiry"></span>
+    </div>
+
+    <section id="textSection" hidden>
+      <div class="text-block" id="shareText"></div>
+    </section>
+
+    <section id="hiddenSection" hidden>
+      <div class="section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        隐藏内容
+      </div>
+
+      <div class="hidden-panel" id="hiddenLocked">
+        <div class="lock-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        </div>
+        <h3>这段内容已加密</h3>
+        <p>请输入 4 位数字密码查看</p>
+        <form class="hidden-form" id="revealForm">
+          <input class="input code-input" id="revealCode" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="••••">
+          <button class="btn btn-primary" type="submit" id="revealBtn">查看</button>
+        </form>
+        <p class="form-error" id="revealError" hidden></p>
+      </div>
+
+      <div class="hidden-content" id="hiddenContent" hidden></div>
+    </section>
+
+    <section id="filesSection" hidden>
+      <div class="section-title">附件 <span class="count" id="fileCount"></span></div>
+      <div id="fileList"></div>
+    </section>
+
+    <footer class="share-foot">
+      <span>由 瞬传 生成 · 到期自动销毁</span>
+      <span id="footExpiry"></span>
+    </footer>
+  </article>
+
+</main>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="/assets/common.js"></script>
+<script>
+const shareId = location.pathname.split('/').filter(Boolean).pop();
+let meta = null;
+let clockTimer = null;
+
+function showView(name) {
+  ['viewLoading', 'viewError', 'viewLock', 'viewShare'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = id !== name;
+  });
+}
+
+function showError(title, text) {
+  $('#errorTitle').textContent = title;
+  $('#errorText').textContent = text;
+  showView('viewError');
+  document.title = '链接已失效 · 瞬传';
+}
+
+async function load() {
+  const res = await api(`/api/public/shares/${encodeURIComponent(shareId)}`);
+
+  if (res.ok) {
+    meta = res.data;
+    render();
+    return;
+  }
+
+  if (res.status === 401 && res.data.error === 'need_code') {
+    if (res.data.title) $('#lockTitle').textContent = res.data.title;
+    showView('viewLock');
+    setTimeout(() => $('#codeInput').focus(), 80);
+    return;
+  }
+
+  if (res.status === 410) {
+    showError('链接已过期', '该分享已到期，内容与文件已被自动删除。');
+    return;
+  }
+
+  if (res.status === 404) {
+    showError('链接不存在', '链接可能输入有误，或内容已被分享者删除。');
+    return;
+  }
+
+  showError('加载失败', res.data.message || '服务暂时不可用，请稍后重试。');
+}
+
+function render() {
+  showView('viewShare');
+
+  const fallbackTitle =
+    meta.files && meta.files.length === 1 ? meta.files[0].name : '分享内容';
+  const title = meta.title || fallbackTitle;
+  $('#shareTitle').textContent = title;
+  document.title = `${title} · 瞬传`;
+
+  $('#shareOwner').textContent = meta.owner ? `来自 ${meta.owner}` : '匿名分享';
+  $('#shareCreated').textContent = formatDateTime(meta.createdAt);
+
+  if (meta.content) {
+    $('#shareText').textContent = meta.content;
+    $('#textSection').hidden = false;
+  }
+
+  if (meta.hasHidden) {
+    $('#hiddenSection').hidden = false;
+  }
+
+  if (meta.files && meta.files.length) {
+    $('#filesSection').hidden = false;
+    $('#fileCount').textContent = `共 ${meta.files.length} 个`;
+    $('#fileList').innerHTML = meta.files
+      .map((file) => {
+        const base = `/api/public/shares/${encodeURIComponent(shareId)}/files/${encodeURIComponent(file.id)}`;
+        const preview = /^image\//.test(file.type || '')
+          ? `<a class="btn btn-quiet btn-sm" href="${base}?mode=inline" target="_blank" rel="noopener">预览</a>`
+          : '';
+        return `
+          <div class="download-row">
+            <span class="fi-icon">${fileIconSvg()}</span>
+            <div class="fi-body">
+              <div class="fi-name">${escapeHtml(file.name)}</div>
+              <div class="fi-meta">${formatBytes(file.size)}</div>
+            </div>
+            ${preview}
+            <a class="btn btn-primary btn-sm" href="${base}">下载</a>
+          </div>`;
+      })
+      .join('');
+  }
+
+  startClock();
+}
+
+function startClock() {
+  if (clockTimer) clearInterval(clockTimer);
+
+  const tick = () => {
+    if (!meta) return;
+    const left = meta.expiresAt - Date.now();
+    $('#shareExpiry').textContent = `有效期至 ${formatDateTime(meta.expiresAt)}`;
+    $('#footExpiry').textContent = left > 0 ? `剩余 ${remainingClock(meta.expiresAt)}` : '已过期';
+    if (left <= 0) {
+      clearInterval(clockTimer);
+      showError('链接已过期', '该分享已到期，内容与文件已被自动删除。');
+    }
+  };
+
+  tick();
+  clockTimer = setInterval(tick, 1000);
+}
+
+/* ---------------- 提取码 ---------------- */
+
+$('#codeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = $('#codeError');
+  const btn = $('#codeBtn');
+  const code = $('#codeInput').value.trim();
+
+  errorEl.hidden = true;
+  if (!code) {
+    errorEl.textContent = '请输入提取码';
+    errorEl.hidden = false;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+
+  const res = await api(`/api/public/shares/${encodeURIComponent(shareId)}/unlock`, {
+    method: 'POST',
+    body: { code }
+  });
+
+  btn.disabled = false;
+  btn.textContent = '打开';
+
+  if (res.ok) {
+    await load();
+    return;
+  }
+
+  const map = {
+    invalid_code: '提取码不正确',
+    too_many_attempts: `尝试次数过多，请 ${res.data.retryAfter || 60} 秒后再试`,
+    expired: '该分享已过期'
+  };
+  errorEl.textContent = map[res.data.error] || res.data.message || '验证失败';
+  errorEl.hidden = false;
+  $('#codeInput').select();
+});
+
+/* ---------------- 隐藏文本 ---------------- */
+
+$('#revealCode').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+});
+
+$('#revealForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = $('#revealError');
+  const btn = $('#revealBtn');
+  const code = $('#revealCode').value.replace(/\D/g, '');
+
+  errorEl.hidden = true;
+  if (code.length !== 4) {
+    errorEl.textContent = '请输入 4 位数字密码';
+    errorEl.hidden = false;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+
+  const res = await api(`/api/public/shares/${encodeURIComponent(shareId)}/reveal`, {
+    method: 'POST',
+    body: { code }
+  });
+
+  btn.disabled = false;
+  btn.textContent = '查看';
+
+  if (res.ok) {
+    $('#hiddenContent').textContent = res.data.content;
+    $('#hiddenContent').hidden = false;
+    $('#hiddenLocked').hidden = true;
+    toast('已解锁隐藏内容', 'ok');
+    return;
+  }
+
+  if (res.status === 429) {
+    errorEl.textContent = res.data.message || '尝试次数过多，请稍后再试';
+  } else if (res.data.error === 'invalid_code') {
+    errorEl.textContent = res.data.remaining != null
+      ? `密码不正确，还可尝试 ${res.data.remaining} 次`
+      : '密码不正确';
+  } else {
+    errorEl.textContent = res.data.message || '验证失败';
+  }
+
+  errorEl.hidden = false;
+  $('#revealCode').select();
+});
+
+load();
+</script>
+</body>
+</html>

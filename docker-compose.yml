@@ -1,0 +1,52 @@
+services:
+  quickdrop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: quickdrop:1.0
+    container_name: quickdrop
+    restart: unless-stopped
+
+    ports:
+      # 左边是宿主机端口，可用 .env 里的 QD_PORT 覆盖
+      - "${QD_PORT:-6026}:6026"
+
+    environment:
+      TZ: Asia/Shanghai
+      # 管理员账号：首次启动时创建
+      QD_ADMIN_USER: ${QD_ADMIN_USER:-admin}
+      # 留空则自动生成随机密码，写入 data/admin-credentials.txt
+      QD_ADMIN_PASSWORD: ${QD_ADMIN_PASSWORD:-}
+      # 签发提取码/访问令牌的密钥，留空则自动生成并持久化到 db.json
+      QD_SECRET: ${QD_SECRET:-}
+      # 有效期（小时）
+      QD_DEFAULT_TTL_HOURS: ${QD_DEFAULT_TTL_HOURS:-24}
+      QD_MAX_TTL_HOURS: ${QD_MAX_TTL_HOURS:-720}
+      # 上传限制
+      QD_MAX_FILE_MB: ${QD_MAX_FILE_MB:-200}
+      QD_MAX_SHARE_MB: ${QD_MAX_SHARE_MB:-500}
+      QD_MAX_FILES: ${QD_MAX_FILES:-10}
+      # 登录状态保留天数
+      QD_SESSION_DAYS: ${QD_SESSION_DAYS:-7}
+
+    volumes:
+      # 命名卷：Docker 会用镜像内的属主初始化，无需手工 chown
+      - quickdrop_data:/app/data
+      # 想直接看数据文件，可改用绑定挂载（宿主机目录需 chown 10001:10001）：
+      # - ./data:/app/data
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:6026/api/me"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  quickdrop_data:

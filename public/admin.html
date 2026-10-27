@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>账号管理 · 瞬传</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M11 21 21 11M21 11h-6.5M21 11v6.5' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body id="adminPage">
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="9.5" fill="url(#qdgrad)"/>
+        <path d="M11 21 21 11M21 11h-6.5M21 11v6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="qdgrad" x1="0" y1="0" x2="32" y2="32">
+            <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="brand-text">瞬传<em>QuickDrop</em></span>
+    </a>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost btn-sm" href="/">返回分享</a>
+      <span class="user-chip"><span class="dot"></span><span id="userName">…</span></span>
+      <button class="btn btn-quiet btn-sm" id="logoutBtn" type="button">退出</button>
+    </div>
+  </div>
+</header>
+
+<main class="page" style="max-width:920px">
+  <section class="hero">
+    <h1>账号管理</h1>
+    <p>本服务不开放注册，只有在这里创建的账号才能登录并创建分享。</p>
+  </section>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-head">
+      <div>
+        <div class="card-title">新建账号</div>
+        <div class="card-sub">用户名 3-32 位，仅限小写字母、数字、下划线、点和连字符</div>
+      </div>
+    </div>
+    <form id="createUserForm">
+      <div class="row" style="align-items:flex-end;flex-wrap:wrap;gap:12px">
+        <div style="flex:1;min-width:170px">
+          <label class="label" for="newUsername">用户名</label>
+          <input class="input" id="newUsername" autocomplete="off" placeholder="例如 zhangsan">
+        </div>
+        <div style="flex:1;min-width:170px">
+          <label class="label" for="newPassword">初始密码</label>
+          <input class="input" id="newPassword" autocomplete="new-password" placeholder="至少 6 位">
+        </div>
+        <div style="width:130px">
+          <label class="label" for="newRole">角色</label>
+          <select class="select" id="newRole">
+            <option value="member">普通</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="createUserBtn" type="submit">创建</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">账号列表</div>
+        <div class="card-sub" id="userSummary">加载中…</div>
+      </div>
+      <button class="btn btn-quiet btn-sm" id="refreshBtn" type="button">刷新</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th>角色</th>
+            <th>状态</th>
+            <th>分享数</th>
+            <th>创建时间</th>
+            <th style="text-align:right">操作</th>
+          </tr>
+        </thead>
+        <tbody id="userTable"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyState" hidden>还没有其他账号</div>
+  </div>
+</main>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="/assets/common.js"></script>
+<script>
+let me = null;
+let users = [];
+
+(async function boot() {
+  const res = await api('/api/me');
+  if (!res.ok || !res.data.user) {
+    location.replace('/login');
+    return;
+  }
+  me = res.data.user;
+  if (me.role !== 'admin') {
+    location.replace('/');
+    return;
+  }
+  $('#userName').textContent = me.username;
+  loadUsers();
+})();
+
+$('#logoutBtn').addEventListener('click', async () => {
+  await api('/api/logout', { method: 'POST' });
+  location.replace('/login');
+});
+
+async function loadUsers() {
+  const res = await api('/api/admin/users');
+  if (!res.ok) {
+    if (res.status === 403) location.replace('/');
+    toast('加载账号失败', 'err');
+    return;
+  }
+  users = res.data.users || [];
+  renderUsers();
+}
+
+function renderUsers() {
+  const tbody = $('#userTable');
+  const empty = $('#emptyState');
+  $('#userSummary').textContent = `共 ${users.length} 个账号`;
+
+  if (!users.length) {
+    tbody.innerHTML = '';
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  tbody.innerHTML = users
+    .map((u) => {
+      const isSelf = me && u.id === me.id;
+      return `
+      <tr data-id="${u.id}">
+        <td>
+          <div style="font-weight:600">${escapeHtml(u.username)}${isSelf ? ' <span class="badge brand">当前</span>' : ''}</div>
+        </td>
+        <td>${u.role === 'admin' ? '<span class="badge brand">管理员</span>' : '<span class="badge">普通</span>'}</td>
+        <td>${u.disabled ? '<span class="badge danger">已禁用</span>' : '<span class="badge ok">正常</span>'}</td>
+        <td>${u.shareCount}</td>
+        <td class="muted">${formatDateTime(u.createdAt)}</td>
+        <td>
+          <div class="row" style="justify-content:flex-end">
+            <button class="btn btn-quiet btn-sm" type="button" data-act="reset">改密码</button>
+            ${
+              isSelf
+                ? ''
+                : `<button class="btn btn-quiet btn-sm" type="button" data-act="toggle">${u.disabled ? '启用' : '禁用'}</button>
+                   <button class="btn btn-quiet btn-sm" type="button" data-act="delete" style="color:var(--danger)">删除</button>`
+            }
+          </div>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
+$('#userTable').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const tr = btn.closest('tr');
+  const id = tr.dataset.id;
+  const user = users.find((u) => u.id === id);
+  if (!user) return;
+
+  if (btn.dataset.act === 'reset') {
+    const pwd = prompt(`为「${user.username}」设置新密码（至少 6 位）`);
+    if (pwd == null) return;
+    if (pwd.length < 6) {
+      toast('密码至少 6 位', 'err');
+      return;
+    }
+    const res = await api(`/api/admin/users/${id}`, { method: 'PATCH', body: { password: pwd } });
+    toast(res.ok ? '密码已重置，该账号其他登录已下线' : res.data.message || '操作失败', res.ok ? 'ok' : 'err');
+    return;
+  }
+
+  if (btn.dataset.act === 'toggle') {
+    const res = await api(`/api/admin/users/${id}`, { method: 'PATCH', body: { disabled: !user.disabled } });
+    if (res.ok) {
+      toast(user.disabled ? '账号已启用' : '账号已禁用', 'ok');
+      loadUsers();
+    } else {
+      toast(res.data.message || '操作失败', 'err');
+    }
+    return;
+  }
+
+  if (btn.dataset.act === 'delete') {
+    if (!confirm(`删除账号「${user.username}」？其所有分享与文件会一并删除，且不可恢复。`)) return;
+    const res = await api(`/api/admin/users/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('账号已删除', 'ok');
+      loadUsers();
+    } else {
+      toast(res.data.message || '删除失败', 'err');
+    }
+  }
+});
+
+$('#createUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = $('#newUsername').value.trim().toLowerCase();
+  const password = $('#newPassword').value;
+  const role = $('#newRole').value;
+  const btn = $('#createUserBtn');
+
+  if (!username || !password) {
+    toast('请填写用户名和密码', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  const res = await api('/api/admin/users', { method: 'POST', body: { username, password, role } });
+  btn.disabled = false;
+
+  if (res.ok) {
+    toast('账号已创建', 'ok');
+    $('#newUsername').value = '';
+    $('#newPassword').value = '';
+    $('#newRole').value = 'member';
+    loadUsers();
+  } else {
+    toast(res.data.message || '创建失败', 'err');
+  }
+});
+
+$('#refreshBtn').addEventListener('click', () => {
+  loadUsers();
+  toast('已刷新');
+});
+</script>
+</body>
+</html>

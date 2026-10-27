@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>登录 · 瞬传</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M11 21 21 11M21 11h-6.5M21 11v6.5' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="9.5" fill="url(#qdgrad)"/>
+        <path d="M11 21 21 11M21 11h-6.5M21 11v6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="qdgrad" x1="0" y1="0" x2="32" y2="32">
+            <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="name">瞬传</div>
+        <div class="sub">QuickDrop</div>
+      </div>
+    </div>
+
+    <h1>登录</h1>
+    <p class="lead">登录后即可创建临时分享链接。</p>
+
+    <div class="alert" id="errorBox" hidden></div>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label class="label" for="username">用户名</label>
+        <input class="input" id="username" name="username" autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label class="label" for="password">密码</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary btn-block" id="submitBtn" type="submit">登录</button>
+    </form>
+
+    <div class="login-foot">
+      本服务不开放注册<br>
+      账号由管理员统一分配
+    </div>
+  </div>
+</div>
+
+<script src="/assets/common.js"></script>
+<script>
+(async () => {
+  const me = await api('/api/me');
+  if (me.ok && me.data.user) {
+    location.replace('/');
+    return;
+  }
+})();
+
+const form = $('#loginForm');
+const errorBox = $('#errorBox');
+const submitBtn = $('#submitBtn');
+
+function showError(message) {
+  errorBox.textContent = message;
+  errorBox.hidden = false;
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  errorBox.hidden = true;
+
+  const username = $('#username').value.trim();
+  const password = $('#password').value;
+
+  if (!username || !password) {
+    showError('请输入用户名和密码');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = '登录中…';
+
+  const res = await api('/api/login', { method: 'POST', body: { username, password } });
+
+  if (res.ok) {
+    location.replace('/');
+    return;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = '登录';
+
+  const map = {
+    invalid_credentials: '用户名或密码不正确',
+    too_many_attempts: `尝试次数过多，请 ${res.data.retryAfter || 60} 秒后再试`,
+    bad_origin: '请求来源异常，请刷新页面重试'
+  };
+  showError(map[res.data.error] || res.data.message || '登录失败，请稍后重试');
+  $('#password').select();
+});
+</script>
+</body>
+</html>

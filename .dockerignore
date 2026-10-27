@@ -1,0 +1,15 @@
+# 运行产物
+data/
+.testdata/
+.shots/
+*.exe
+quickdrop
+quickdrop-linux
+
+# 版本控制与文档
+.git/
+.gitignore
+*.md
+
+# 本地配置
+.env

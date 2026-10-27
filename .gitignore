@@ -1,0 +1,17 @@
+# 数据（分享内容、上传文件、账号）
+data/
+.testdata/
+.shots/
+
+# 构建产物
+quickdrop
+quickdrop.exe
+quickdrop-linux
+
+# 本地配置
+.env
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store
