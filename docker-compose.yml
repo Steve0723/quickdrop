@@ -30,10 +30,9 @@ services:
       QD_SESSION_DAYS: ${QD_SESSION_DAYS:-7}
 
     volumes:
-      # 命名卷：Docker 会用镜像内的属主初始化，无需手工 chown
-      - quickdrop_data:/app/data
-      # 想直接看数据文件，可改用绑定挂载（宿主机目录需 chown 10001:10001）：
-      # - ./data:/app/data
+      # 存储路径：默认落在 docker-compose.yml 同级的 ./data
+      # 想换位置就在 .env 里设 QD_DATA_DIR=/绝对路径
+      - ${QD_DATA_DIR:-./data}:/app/data
 
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:6026/api/me"]
@@ -47,6 +46,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  quickdrop_data:

@@ -166,7 +166,7 @@ func main() {
 
 	store := NewStore(cfg.DBPath)
 	if err := store.Load(); err != nil {
-		log.Fatalf("数据加载失败: %v", err)
+		log.Fatalf("数据加载失败: %v\n提示：若使用绑定挂载，请确认宿主机数据目录对容器内 UID 10001 可写（sudo chown -R 10001:10001 ./data）", err)
 	}
 
 	if store.Secret() == "" {
