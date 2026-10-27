@@ -52,9 +52,9 @@ irm https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.ps1 | iex
 两种方式等价，任选其一：
 
 ```bash
-# 1. 通过环境变量传给脚本
+# 1. 通过环境变量传给脚本（变量以「名=值」形式前置）
 curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh \
-  | QD_DIR=/opt/quickdrop QD_PORT=8080 QD_ADMIN_PASSWORD=my-pass bash
+  | QD_DIR=/opt/quickdrop QD_PORT=8080 bash
 
 # 2. 先下载脚本，改完变量再执行
 curl -fsSL https://raw.githubusercontent.com/Steve0723/quickdrop/main/deploy.sh -o deploy.sh
