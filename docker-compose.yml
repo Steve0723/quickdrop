@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: quickdrop:1.0
+    image: quickdrop:1.1
     container_name: quickdrop
     restart: unless-stopped
 

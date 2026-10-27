@@ -111,13 +111,9 @@ mkdir -p /mnt/disk/quickdrop-data
 docker compose up -d --build
 ```
 
-> **Linux 注意**：容器以 UID 10001 运行，绑定挂载的宿主机目录需要可写，否则启动会报「数据加载失败」：
+> **权限**：容器以 root 启动，入口脚本会把 `QD_DATA_DIR` 的属主修正为 `10001:10001`，然后降权到该用户运行主程序。所以绑定挂载不需要手动 chown，换盘、换目录都能直接用。
 >
-> ```bash
-> sudo chown -R 10001:10001 /mnt/disk/quickdrop-data
-> ```
->
-> Windows / macOS 的 Docker Desktop 不需要这一步。
+> 只有在 compose 里显式写了 `user:` 覆盖运行用户时，才需要自己保证目录可写。
 
 ## 配置
 
@@ -155,6 +151,31 @@ tar czf quickdrop-backup-$(date +%F).tar.gz -C data .
 ```
 
 恢复时解压回 `QD_DATA_DIR`，再 `docker compose up -d` 即可。
+
+## 常见问题
+
+**启动报 `mkdir /app/data/files: permission denied`**
+
+旧版本镜像以非 root 用户直接运行，绑定挂载的宿主机目录属主是 root，写不进去。升级镜像后入口脚本会自动修正：
+
+```bash
+docker compose up -d --build
+```
+
+不想升级的话，临时应急：
+
+```bash
+sudo chown -R 10001:10001 ./data
+docker compose restart
+```
+
+**端口被占用**
+
+改 `.env` 里的 `QD_PORT`，再 `docker compose up -d`。
+
+**改了 `QD_DATA_DIR` 后数据「消失」**
+
+数据在新目录里，旧目录不会自动迁移。要保留历史数据就把旧 `data/` 里的内容复制过去再启动。
 
 ## 反向代理 / HTTPS
 
@@ -206,6 +227,7 @@ quickdrop/
 │   ├── login.html   index.html   share.html   admin.html   404.html
 │   └── assets/      style.css  common.js
 ├── Dockerfile
+├── docker-entrypoint.sh   # 修正数据目录属主后降权运行
 ├── docker-compose.yml
 ├── .env.example     # 配置模板
 └── data/            # 运行时生成（可用 QD_DATA_DIR 改位置）
